@@ -1,7 +1,10 @@
 (ns oswa.core
-    (:require [reagent.core :as reagent]
-              [re-frame.core :as r])
-    (:require-macros [oswa.core :refer [defsub defhandler defcomponent with-subs]]))
+    (:require [cljs.core.async :refer [<!]]
+              [reagent.core :as reagent]
+              [re-frame.core :as r]
+              [cljs-http.client :as http])
+    (:require-macros [oswa.macros :refer [defsub defhandler defcomponent with-subs]]
+                     [cljs.core.async.macros :refer [go]]))
 
 (defn dispatchv [& args]
   #(do (r/dispatch (vec (concat args [(-> % .-target .-value)])))))
@@ -15,8 +18,9 @@
   {:route ""
    :email ""
    :password ""
-   :projects []
-   :adding-project ""})
+   :main-form {:time ""
+               :finances ""
+               :quality ""}})
 
 (defsub :route [db]
   (:route db))
@@ -30,11 +34,8 @@
 (defsub :token [db]
   (:token db))
 
-(defsub :adding-project [db]
-  (:adding-project db))
-
-(defsub :projects [db]
-  (:projects db))
+(defsub :main-form [db]
+  (:main-form db))
 
 (defhandler :initialize-db [_]
   default-db)
@@ -51,8 +52,14 @@
 (defhandler :token [db token]
   (assoc db :token token))
 
-(defhandler :adding-project [db current-project]
-  (assoc db :adding-project current-project))
+(defhandler :time [db tm]
+  (assoc-in db [:main-form :time] tm))
+
+(defhandler :finances [db finances]
+  (assoc-in db [:main-form :finances] finances))
+
+(defhandler :quality [db quality]
+  (assoc-in db [:main-form :quality] quality))
 
 (defn api-login [email password]
   (when (and (= email "ymln@ymln.name")
@@ -66,20 +73,30 @@
     (api-login @email @password)
     db))
 
-(defhandler :add-project [db project]
-  (if (and project
-           (not (empty? project)))
-    (update-in db [:projects] conj project)))
+(defhandler :upload-file [db tm finances quality]
+  (go (let [file (-> (.getElementById js/document "file")
+                     .-files
+                     (aget 0))
+            response (<! (http/post "/api"
+                                    {:multipart-params {:time tm
+                                                        :finances finances
+                                                        :quality quality
+                                                        :file file}}))]
+        (js/alert (pr-str response))))
+  db)
 
 (defn link [route value]
    [:a {:href "javascript:void(0)" :on-click #(do (r/dispatch [:route route]) (.preventDefault %))} value])
 
-(defn header []
+(defcomponent header []
+  [token [:token]]
   [:header
-   [link "" "Home"]
-   [link "login" "Log in"]
-   [link "signup" "Sign up"]
-   [link "logout" "Log out"]])
+   (concat
+     [link "" "Home"]
+     (if @token
+       [[link "logout" "Log out"]]
+       [[link "login" "Log in"]
+        [link "signup" "Sign up"]]))])
 
 (defn footer []
   [:footer])
@@ -88,33 +105,30 @@
   [:div
    [header]
    [:div content]
-   [footer]])
+   [footer]
+   [:link {:rel "stylesheet"
+           :href "https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css"
+           :integrity "sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7"
+           :cross-origin "anonymous"}]])
 
-(defn project [name]
-  [:div name])
+(defn input [label name value on-change]
+  [:div.form-group
+   [:label {:for name} label]
+   [:input.form-control {:name name :id name :value value :on-change on-change}]])
 
-(defcomponent projects []
-  [prjs [:projects]]
-  [:div
-   [:div (for [prj @prjs]
-           [project prj])]
-   [:div "Total projects: " (count @prjs)]])
-
-(defcomponent add-project-button []
-  [current-project [:adding-project]]
-  [:div
-   [:input {:on-change (dispatchv :adding-project) :value @current-project}]
-   [:button {:on-click (dispatchp :add-project @current-project)} "Add project"]])
-
-(defn project-list []
-  [:div
-   [projects]
-   [add-project-button]])
+(defcomponent main-form []
+  [f [:main-form]]
+  [:form {:method "post" :on-submit (dispatchp :upload-file (:time @f) (:finances @f) (:quality @f))}
+   [:input {:type "file" :name "file" :id "file"}]
+   [input "Time" "time" (:time @f) (dispatchv :time)]
+   [input "Finances" "finances" (:finances @f) (dispatchv :finances)]
+   [input "Quality" "quality" (:quality @f) (dispatchv :quality)]
+   [:button.btn.btn-default {type "submit"} "Submit"]])
 
 (defcomponent main []
   [token [:token]]
   (if @token
-    [page [project-list]]
+    [page [main-form]]
     [page "Welcome to our system!"]))
 
 (defn validation-errors [email password]

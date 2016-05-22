@@ -1,4 +1,4 @@
-(ns oswa.core)
+(ns oswa.macros)
 
 (defmacro defsub [name [db & args] & body]
   `(re-frame.core/register-sub

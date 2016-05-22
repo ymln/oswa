@@ -1,9 +1,16 @@
 (defproject oswa "0.1.0-SNAPSHOT"
   :description "org-struct web-application"
-  :dependencies [[org.clojure/clojure "1.7.0"]
+  :dependencies [[org.clojure/clojure "1.8.0"]
                  [org.clojure/clojurescript "1.7.170"]
                  [reagent "0.5.1"]
-                 [re-frame "0.7.0"]]
+                 [re-frame "0.7.0"]
+                 [cljs-http "0.1.40"]
+                 [ring/ring-core "1.4.0"]
+                 [ring/ring-jetty-adapter "1.4.0"]
+                 [ring/ring-devel "1.4.0"]
+                 [compojure "1.5.0"]
+                 [clojure-csv/clojure-csv "2.0.2"]
+                 [org-struct "0.1.0-SNAPSHOT"]]
 
   :min-lein-version "2.5.3"
 
@@ -14,11 +21,14 @@
 
   :clean-targets ^{:protect false} ["resources/public/js/compiled" "target"]
 
+  :main oswa.server
+
   :figwheel {:css-dirs ["resources/public/css"]}
 
   :cljsbuild {:builds [{:id "dev"
                         :source-paths ["src/cljs"]
-                        :figwheel {:on-jsload "oswa.core/mount-root"}
+                        :figwheel {:on-jsload "oswa.core/mount-root"
+                                   :ring-handler "oswa.server/reloadable-app"}
                         :compiler {:main oswa.core
                                    :output-to "resources/public/js/compiled/app.js"
                                    :output-dir "resources/public/js/compiled/out"
