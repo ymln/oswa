@@ -4,3 +4,4 @@
 /resources/public/js/compiled
 out
 .lein-repl-history
+jars/org-struct-0.1.0-SNAPSHOT-standalone.jar
