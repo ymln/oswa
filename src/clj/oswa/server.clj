@@ -5,7 +5,8 @@
             [ring.middleware.reload :refer [wrap-reload]]
             [compojure.core :refer [defroutes GET POST]]
             [compojure.route :refer [resources]]
-            [oswa.solver :as solver]))
+            [oswa.solver :as solver])
+  (:gen-class))
 
 (defroutes app
   (GET "/" _

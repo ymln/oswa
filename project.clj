@@ -1,7 +1,7 @@
 (defproject oswa "0.1.0-SNAPSHOT"
   :description "org-struct web-application"
   :dependencies [[org.clojure/clojure "1.8.0"]
-                 [org.clojure/clojurescript "1.7.170"]
+                 [org.clojure/clojurescript "1.8.51"]
                  [reagent "0.5.1"]
                  [re-frame "0.7.0"]
                  [cljs-http "0.1.40"]
@@ -22,6 +22,9 @@
   :clean-targets ^{:protect false} ["resources/public/js/compiled" "target"]
 
   :main oswa.server
+  :aot :all
+  :hooks [leiningen.cljsbuild]
+  :jar true
 
   :figwheel {:css-dirs ["resources/public/css"]}
 
